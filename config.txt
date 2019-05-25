@@ -1,0 +1,5 @@
+{
+  "TRAIN_FILE": "BATADAL_dataset03.csv",
+  "OPTIM_FILE": "BATADAL_dataset04.csv",
+  "TEST_FILE": "BATADAL_test_dataset.csv"
+}
