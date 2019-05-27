@@ -145,6 +145,39 @@ def create_water_tanks_plot(data_df, columns, filename, logger):
     bbox_inches='tight')
 
 
+def visualize_attack(times, normal_values, attack_values, title, axis_label, 
+  filename, logger):
+
+  sns.set()
+  plt.figure(figsize=(10,5))
+  ax = plt.subplot(111)
+
+  plt.plot(times, normal_values, color = 'blue')
+  plt.plot(times, attack_values, color = 'red')
+
+  plt.title(title)
+  plt.xlabel("Time")
+  plt.ylabel(axis_label)
+
+  box = ax.get_position()
+  ax.set_position([box.x0, box.y0, box.width * 0.8, box.height])
+  legend_str  =  ["Normal signal", "Signal during attack"]
+  plt.legend(legend_str, loc = 'center left', bbox_to_anchor=(1, 0.5), 
+    fancybox=True, shadow=True)
+  plt.savefig(logger.get_output_file(filename), dpi = 120, 
+    bbox_inches='tight')
+
+
+
+
+
+
+
+  
+
+
+
+
 
 
   
