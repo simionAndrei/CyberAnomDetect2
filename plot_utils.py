@@ -166,39 +166,3 @@ def visualize_attack(times, normal_values, attack_values, title, axis_label,
     fancybox=True, shadow=True)
   plt.savefig(logger.get_output_file(filename), dpi = 120, 
     bbox_inches='tight')
-
-
-
-
-
-
-
-  
-
-
-
-
-
-
-  
-
-
-'''
-from logger import Logger
-
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
-
-logger = Logger(show = True, html_output = True, config_file = "config.txt")
-
-dateparse = lambda x: pd.datetime.strptime(x, '%d/%m/%y %H')
-train_filename = logger.config_dict['TRAIN_FILE']
-df_train = pd.read_csv(logger.get_data_file(logger.config_dict['TRAIN_FILE']), 
-                       parse_dates = ['DATETIME'], date_parser = dateparse, index_col = 'DATETIME')
-df_train.sort_index(inplace = True)
-
-df_train_days = df_train.groupby(pd.Grouper(freq='D')).mean()
-from plot_utils import make_water_tanks_plot
-make_water_tanks_plot(df_train_days, logger)
-'''
