@@ -71,9 +71,18 @@ def plot_predictions(df, arma_mod):
 
     predict_points = arma_mod.predict(start=start, end=end)
 
+    plt.figure(figsize=(10,5))
+
+    times = df[startI:].index
+    plt.plot(times, df[startI:], color = 'blue', label = "True")
+    plt.plot(times, predict_points, label='Prediction', color = 'gold')
+    plt.savefig("test.png", dpi = 120, bbox_inches='tight')
+
+    '''
     ax = df[startI:].plot(figsize=(12, 8))
     ax = predict_points.plot(ax=ax, style='r--', label='Prediction')
     ax.legend()
+    '''
 
     original = df[startI:]
 
