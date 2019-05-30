@@ -2,5 +2,5 @@
   "TRAIN_FILE": "BATADAL_dataset03.csv",
   "OPTIM_FILE": "BATADAL_dataset04.csv",
   "OPTIM_ATTACKS_FILE": "BATADAL_dataset04_attacks.csv",
-  "TEST_FILE": "BATADAL_test_dataset.csv"
+  "TEST_FILE": "BATADAL_test_dataset_labeled.csv"
 }

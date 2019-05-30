@@ -16,7 +16,7 @@ class PercentilesDiscretization():
   def discretize_signal(self, signal):
 
     self.signal = signal
-    self.discrete_signal, self.bins = pd.qcut(
+    self.discrete_signal, self.bins = pd.cut(
       signal, self.quantiles, retbins=True, labels = range(self.quantiles))
     self.logger.log("Percentile discretization using {} quantiles".format(self.quantiles))
 
@@ -60,7 +60,7 @@ class PercentilesDiscretization():
     if self.discrete_signal is None:
       self.logger.log("No signal previously discretize. Call discretize_signal before.")
 
-    return self.discretize_signal
+    return self.discrete_signal
 
 
 '''
