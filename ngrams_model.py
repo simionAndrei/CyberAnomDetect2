@@ -45,7 +45,7 @@ class NGramsModel():
     return zip(*[signal[i:] for i in range(self.n)])
 
 
-  def fit_signal(self, signal_type, quantiles = 6):
+  def fit_signal(self, signal_type, quantiles = 8):
 
     self.discretizator = PercentilesDiscretization(quantiles = quantiles, logger = self.logger)
     self.discretizator.discretize_signal(self.df_train[signal_type])
@@ -72,13 +72,25 @@ class NGramsModel():
         if crt_prob is None or crt_prob < threshold:
           #self.logger.log("Predicted anomaly")
 
-          if self.df_optim.iloc[idx + self.n - 1]['ATT_FLAG'] == "1":
+          start_flag = self.df_optim.iloc[idx]['ATT_FLAG']
+          end_flag   = self.df_optim.iloc[idx + self.n - 1]['ATT_FLAG'] 
+          if int(start_flag) == 1 or int(end_flag) == 1:
             tp += 1
           else:
             fp += 1
 
-      optim_rate[threshold] = tp / (fp if fp != 0 else 1)
+      if fp == 0:
+        precision = 1 if tp != 0 else 0
+      else:
+        #precision = tp / (tp + fp)
+        precision = tp / fp
 
+      precision = tp
+
+      optim_rate[threshold] = precision
+      #tp / (fp if fp != 0 else 1)
+
+    print(optim_rate)
     optim_threshold = sorted(optim_rate.items(), key=lambda tup: tup[1])[-1][0]
     self.logger.log("Optimal threshold for {} is {}".format(signal_type, optim_threshold))
     self.optim_thresholds[signal_type] = optim_threshold
@@ -116,7 +128,7 @@ class NGramsModel():
 
         start_flag = self.df_optim.iloc[idx]['ATT_FLAG']
         end_flag   = self.df_optim.iloc[idx + self.n - 1]['ATT_FLAG']  
-        if start_flag == 1 or end_flag == 1:
+        if int(start_flag) == 1 or int(end_flag) == 1:
           tp += 1
         else:
           fp += 1
