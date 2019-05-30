@@ -9,6 +9,7 @@ import statsmodels.tsa
 from statsmodels.graphics.api import qqplot
 import numpy as np
 import pandas as pd
+from logger import Logger
 
 from sklearn.metrics import mean_squared_error
 
@@ -18,8 +19,32 @@ import scipy.stats
 from statsmodels.tsa.stattools import acf
 
 
-def plot_autocorrelations(df):
+def grid_search(df, terms, ps, ds, qs):
+    all_results = []
+    for term in terms:
+        df1 = df[term]
+        results = []
+
+        for p in ps:
+            for q in qs:
+                for d in ds:
+                    try:
+                        model = create_model(df1, p, d, q)
+                        results.append([model, p, d, q, term])
+
+                    except:
+                        pass
+
+        results.sort(key=lambda e: e[0].aic)
+
+        all_results.append(results)
+
+    return all_results
+
+
+def plot_autocorrelations(df, title="Original Series"):
     fig = plt.figure(figsize=(12, 8))
+    fig.suptitle(title)
     ax1 = fig.add_subplot(211)
     fig = sm.graphics.tsaplots.plot_acf(df.values.squeeze(), lags=40, ax=ax1)
     ax2 = fig.add_subplot(212)
@@ -27,8 +52,8 @@ def plot_autocorrelations(df):
 
 
 # Creates an ARMA model with the specified parameters
-def create_model(df, p, q, r=0):
-    return ARIMA(df, order=(p, q, r)).fit()
+def create_model(df, p, q, d=0):
+    return ARIMA(df, order=(p, d, q)).fit()
 
 
 # Prints the stats for an ARMA model
@@ -63,7 +88,7 @@ def extract_resid_stats(arma_mod):
     print(table.set_index('lag'))
 
 
-def plot_predictions(df, arma_mod):
+def plot_predictions(df, arma_mod, file="test.png"):
     startI = int(len(df) * 0.98)
 
     start = df.index[startI]
@@ -71,12 +96,14 @@ def plot_predictions(df, arma_mod):
 
     predict_points = arma_mod.predict(start=start, end=end)
 
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10, 5))
 
     times = df[startI:].index
-    plt.plot(times, df[startI:], color = 'blue', label = "True")
-    plt.plot(times, predict_points, label='Prediction', color = 'gold')
-    plt.savefig("test.png", dpi = 120, bbox_inches='tight')
+    plt.plot(times, df[startI:], color='blue', label="True")
+    plt.plot(times, predict_points, label='Prediction', color='gold')
+    plt.title("Prediction")
+    plt.legend()
+    plt.savefig(file, dpi=120, bbox_inches='tight')
 
     '''
     ax = df[startI:].plot(figsize=(12, 8))
@@ -93,6 +120,40 @@ def plot_predictions(df, arma_mod):
 
     # ax.axis((-20.0, 38.0, -4.0, 200.0))
 
+def plot_predictions_cmp(df, arma_mods, file="test.png"):
+    startI = int(len(df) * 0.98)
+
+    start = df.index[startI]
+    end = df.index[-1]
+
+
+    plt.figure(figsize=(10, 5))
+    original = df[startI:]
+
+    times = df[startI:].index
+    plt.plot(times, df[startI:], color='blue', label="True")
+
+    for (arma_mod,p,q) in arma_mods:
+        predict_points = arma_mod.predict(start=start, end=end)
+        plt.plot(times, predict_points, label='Prediction p({}) q({})'.format(p, q))
+
+        print("Mean Forecast Error: {} Mean Absolute Error: {} Mean Square error:  {}".format(
+            mean_forecast_err(original, predict_points),
+            mean_absolute_err(original, predict_points),
+            mean_squared_error(original, predict_points)))
+
+    plt.title("Prediction")
+    plt.legend()
+    plt.savefig(file, dpi=120, bbox_inches='tight')
+
+    '''
+    ax = df[startI:].plot(figsize=(12, 8))
+    ax = predict_points.plot(ax=ax, style='r--', label='Prediction')
+    ax.legend()
+    '''
+
+
+
 
 def mean_forecast_err(y, yhat):
     return y.sub(yhat).mean()
@@ -102,7 +163,7 @@ def mean_absolute_err(y, yhat):
     return np.mean((np.abs(y.sub(yhat).mean()) / yhat))  # or percent error = * 100
 
 
-def answer(series, field, p, q, r=0):
+def answer(series, field, p, q, r=0, file="test.png"):
     df1 = series[field]
     plot_autocorrelations(df1)
 
@@ -113,8 +174,29 @@ def answer(series, field, p, q, r=0):
     analise_model(df1_model)
     # %%
 
-    plot_autocorrelations(df1_model.resid)
+    plot_autocorrelations(df1_model.resid, "Residuals")
     # %%
     extract_resid_stats(df1_model)
     # %%
-    plot_predictions(df1, df1_model)
+    plot_predictions(df1, df1_model, file)
+
+    return df1_model
+
+
+if __name__ == '__main__':
+    def parser(x):
+        return pd.datetime.strptime(x, '%d/%m/%y %H')
+
+
+    logger = Logger(show=True, html_output=True, config_file="config.txt")
+
+    series = pd.read_csv(logger.get_data_file(logger.config_dict['TRAIN_FILE']), header=0, parse_dates=[0], index_col=0,
+                         squeeze=True, date_parser=parser)
+
+    # answer(series, 'L_T1', 2, 0)
+    # answer(series, 'L_T2', 2, 0)
+    # answer(series, 'L_T7', 2, 0)
+
+    grid_search_result = grid_search(series, ['L_T1', 'L_T2'], range(0, 5), range(0, 1), range(0, 1))
+
+    print("DONE")
