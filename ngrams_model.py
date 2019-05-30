@@ -45,7 +45,7 @@ class NGramsModel():
     return zip(*[signal[i:] for i in range(self.n)])
 
 
-  def fit_signal(self, signal_type, quantiles = 8):
+  def fit_signal(self, signal_type, quantiles = 5):
 
     self.discretizator = PercentilesDiscretization(quantiles = quantiles, logger = self.logger)
     self.discretizator.discretize_signal(self.df_train[signal_type])
