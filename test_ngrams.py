@@ -4,7 +4,7 @@ from logger import Logger
 if __name__ == "__main__":
 
   logger = Logger(show = True, html_output = True, config_file = "config.txt")
-  model = NGramsModel(n = 3, logger = logger)
+  model = NGramsModel(n = 5, logger = logger)
 
   model.fit()
   model.predict()

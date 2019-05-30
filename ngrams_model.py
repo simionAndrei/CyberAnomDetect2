@@ -45,7 +45,7 @@ class NGramsModel():
     return zip(*[signal[i:] for i in range(self.n)])
 
 
-  def fit_signal(self, signal_type, quantiles = 5):
+  def fit_signal(self, signal_type, quantiles = 6):
 
     self.discretizator = PercentilesDiscretization(quantiles = quantiles, logger = self.logger)
     self.discretizator.discretize_signal(self.df_train[signal_type])
@@ -80,17 +80,12 @@ class NGramsModel():
             fp += 1
 
       if fp == 0:
-        precision = 1 if tp != 0 else 0
+        ratio = 1 if tp != 0 else 0
       else:
-        #precision = tp / (tp + fp)
-        precision = tp / fp
+        ratio = tp / fp
 
-      precision = tp
+      optim_rate[threshold] = ratio
 
-      optim_rate[threshold] = precision
-      #tp / (fp if fp != 0 else 1)
-
-    print(optim_rate)
     optim_threshold = sorted(optim_rate.items(), key=lambda tup: tup[1])[-1][0]
     self.logger.log("Optimal threshold for {} is {}".format(signal_type, optim_threshold))
     self.optim_thresholds[signal_type] = optim_threshold
