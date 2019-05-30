@@ -63,9 +63,9 @@ class NGramsModel():
     self.discretizator.discretize_signal(self.df_optim[signal_type])
     discrete_signal = self.discretizator.get_discrete_signal()
 
-    tp, fp = 0, 0
     optim_rate = {}
-    for threshold in self.thresholds: 
+    for threshold in self.thresholds:
+      tp, fp = 0, 0
       for idx, ngram in enumerate(self.compute_ngrams(discrete_signal)):
         crt_prob = self.ngrams_probs[signal_type].get(ngram, None)
 
@@ -121,8 +121,8 @@ class NGramsModel():
           self.df_test.index[idx], self.df_test.index[idx + self.n - 1]))
         '''
 
-        start_flag = self.df_optim.iloc[idx]['ATT_FLAG']
-        end_flag   = self.df_optim.iloc[idx + self.n - 1]['ATT_FLAG']  
+        start_flag = self.df_test.iloc[idx]['ATT_FLAG']
+        end_flag   = self.df_test.iloc[idx + self.n - 1]['ATT_FLAG']
         if int(start_flag) == 1 or int(end_flag) == 1:
           tp += 1
         else:
