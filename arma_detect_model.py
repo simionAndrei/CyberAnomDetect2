@@ -1,5 +1,7 @@
 from collections import Counter
 
+from statsmodels.tsa.arima_model import _arma_predict_out_of_sample
+
 import pandas as pd
 import numpy as np
 
@@ -11,14 +13,14 @@ class ArmaDetectModel:
     def __init__(self, logger):
 
         self.logger = logger
-        self.coefficients = np.arange(2, 50, 0.1)
+        self.coefficients = np.arange(0.1, 50, 0.1)
 
         self.params = [[5, 1, 0, 'L_T1'], [5, 1, 0, 'L_T2'], [5, 1, 0, 'L_T3'], [5, 1, 0, 'L_T4'], [5, 1, 0, 'L_T5'],
-                       [5, 1, 0, 'L_T6'], [5, 1, 0, 'L_T7'], [5, 1, 0, 'F_PU1'], [0, 0, 0, 'S_PU1'], [5, 1, 0, 'F_PU2'],
-                       [5, 1, 0, 'S_PU2'], [0, 0, 0, 'F_PU3'], [0, 0, 0, 'S_PU3'], [5, 1, 0, 'F_PU4'],
-                       [5, 1, 0, 'S_PU4'], [0, 0, 0, 'F_PU5'], [0, 0, 0, 'S_PU5'], [4, 0, 0, 'F_PU6'],
+                       [5, 1, 0, 'L_T6'], [5, 1, 0, 'L_T7'], [5, 1, 0, 'F_PU1'], [5, 1, 0, 'F_PU2'],
+                       [5, 1, 0, 'S_PU2'], [5, 1, 0, 'F_PU4'],
+                       [5, 1, 0, 'S_PU4'], [4, 0, 0, 'F_PU6'],
                        [4, 0, 0, 'S_PU6'], [5, 1, 0, 'F_PU7'], [5, 1, 0, 'S_PU7'], [5, 1, 0, 'F_PU8'],
-                       [5, 1, 0, 'S_PU8'], [0, 0, 0, 'F_PU9'], [0, 0, 0, 'S_PU9'], [5, 1, 0, 'F_PU10'],
+                       [5, 1, 0, 'S_PU8'], [5, 1, 0, 'F_PU10'],
                        [5, 1, 0, 'S_PU10'], [0, 1, 0, 'F_PU11'], [0, 1, 0, 'S_PU11'], [5, 1, 0, 'F_V2'],
                        [4, 1, 0, 'S_V2'], [5, 1, 0, 'P_J280'], [5, 1, 0, 'P_J269'], [5, 1, 0, 'P_J300'],
                        [5, 1, 0, 'P_J256'], [5, 1, 0, 'P_J289'], [5, 1, 0, 'P_J415'], [5, 1, 0, 'P_J302'],
@@ -36,14 +38,14 @@ class ArmaDetectModel:
         train_filename = self.logger.config_dict['TRAIN_FILE']
         self.logger.log("Start reading training file {}...".format(train_filename))
         self.df_train = pd.read_csv(self.logger.get_data_file(train_filename), skipinitialspace=True,
-                                    parse_dates=['DATETIME'], date_parser=dateparse, index_col='DATETIME')
+                                    parse_dates=['DATETIME'], date_parser=dateparse, index_col='DATETIME').asfreq('H')
         self.df_train.sort_index(inplace=True)
         self.logger.log("Finish reading training file", show_time=True)
 
         optim_filename = self.logger.config_dict['OPTIM_FILE']
         self.logger.log("Start reading optimization file {}...".format(optim_filename))
         self.df_optim = pd.read_csv(self.logger.get_data_file(optim_filename), skipinitialspace=True,
-                                    parse_dates=['DATETIME'], date_parser=dateparse, index_col='DATETIME')
+                                    parse_dates=['DATETIME'], date_parser=dateparse, index_col='DATETIME').asfreq('H')
         self.df_optim.sort_index(inplace=True)
         self.logger.log("Finish reading optimization file", show_time=True)
 
@@ -55,15 +57,30 @@ class ArmaDetectModel:
         test_filename = self.logger.config_dict['TEST_FILE']
         self.logger.log("Start reading testing file {}...".format(test_filename))
         self.df_test = pd.read_csv(self.logger.get_data_file(test_filename), skipinitialspace=True,
-                                   parse_dates=['DATETIME'], date_parser=dateparse, index_col='DATETIME')
+                                   parse_dates=['DATETIME'], date_parser=dateparse, index_col='DATETIME').asfreq('H')
         self.df_test.sort_index(inplace=True)
         self.logger.log("Finish reading test file", show_time=True)
 
         self.test_attacks_location = np.where(self.df_test['ATT_FLAG'] == 1)
 
     def _compute_stats(self, series, signal_name, model):
-        predict_points = np.array(model.predict(start=series.index[0], end=series.index[-1]))
         true_points = np.array(series[signal_name])
+
+        # predict(model.model, model.params, start=str(self.df_train.index[-1]), end=str(series.index[-1]))
+
+        # predict_points = np.array(model.predict(true_points, start=str(self.df_train.index[-1]), end=str(series.index[-1])))[
+        #                  -len(series):]
+
+        predict_points = np.array(
+            model.predict(start=0, end=-1))
+
+        # params = model.params
+        # p = model.k_ar
+        # q = model.k_ma
+        # k_exog = model.k_exog
+        # k_trend = model.k_trend
+        #
+        # _arma_predict_out_of_sample(params, 2000, )
         std_ma = series[signal_name].rolling(24).mean().std()
 
         se = true_points - predict_points
@@ -116,6 +133,7 @@ class ArmaDetectModel:
                 ratio = tp / fp
 
             if ratio > best_ratio:
+                best_ratio = ratio
                 optim_coefficient = coefficient
 
         self.logger.log("Optimal threshold for {} is {}".format(signal_name, optim_coefficient))
@@ -126,15 +144,19 @@ class ArmaDetectModel:
     def fit(self):
 
         for [p, q, d, signal_name] in self.params:
-            model = create_model(self.df_train[signal_name], p, q, d)
+            model = create_model(self.df_optim[signal_name], p, q, d)
             coefficient = self._compute_optimal_threshold(model, signal_name)
 
-            self.models.append((model, coefficient, signal_name))
+            self.models.append((model, coefficient, signal_name, [p, q, d, signal_name]))
 
     def predict(self):
 
-        total_predictions = np.full((2, len(self.df_test)), False, dtype=bool)
-        for (model, coefficient, signal_name) in self.models:
+        total_predictions = np.full(len(self.df_test), False)
+        for (model, coefficient, signal_name, [p, q, d, signal_name]) in self.models:
+            try:
+                model = create_model(self.df_test[signal_name], p, q, d)
+            except:
+                continue
             (predict_points, true_points, std_ma, se, mse) = self._compute_stats(self.df_test, signal_name, model)
 
             # compute the threshold value
@@ -152,7 +174,7 @@ class ArmaDetectModel:
 
             self.logger.log("Signal {}: TP#{} / FP#{}".format(signal_name, tp, fp))
 
-            predictions += predictions
+            total_predictions = total_predictions + predictions
 
         total_estimated_attacks = total_predictions.sum()
 

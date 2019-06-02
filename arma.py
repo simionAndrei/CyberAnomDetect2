@@ -10,6 +10,7 @@ from statsmodels.graphics.api import qqplot
 import numpy as np
 import pandas as pd
 from logger import Logger
+from statsmodels.tsa.arima_model import _arma_predict_out_of_sample, _arma_predict_in_sample
 
 from sklearn.metrics import mean_squared_error
 
@@ -53,8 +54,69 @@ def plot_autocorrelations(df, title="Original Series"):
 
 # Creates an ARMA model with the specified parameters
 def create_model(df, p, q, d=0):
-    return ARIMA(df, order=(p, d, q)).fit()
+    return ARIMA(df, order=(p, d, q)).fit(disp=-1)
 
+
+# "Borrowed" from the framework, now accepts residuals
+def predict(arma_model, params, start=None, end=None, exog=None, dynamic=False, resid=None):
+    method = getattr(arma_model, 'method', 'mle')  # don't assume fit
+    #params = np.asarray(params)
+
+    # will return an index of a date
+    start, end, out_of_sample, _ = (
+        arma_model._get_prediction_index(start, end, dynamic))
+
+    if out_of_sample and (exog is None and arma_model.k_exog > 0):
+        raise ValueError("You must provide exog for ARMAX")
+
+    endog = arma_model.endog
+    if resid is None:
+        resid = arma_model.geterrors(params)
+    k_ar = arma_model.k_ar
+
+    if exog is not None:
+        # Note: we ignore currently the index of exog if it is available
+        exog = np.asarray(exog)
+        if arma_model.k_exog == 1 and exog.ndim == 1:
+            exog = exog[:, None]
+
+    if out_of_sample != 0 and arma_model.k_exog > 0:
+        # we need the last k_ar exog for the lag-polynomial
+        if arma_model.k_exog > 0 and k_ar > 0 and not dynamic:
+            # need the last k_ar exog for the lag-polynomial
+            exog = np.vstack((arma_model.exog[-k_ar:, arma_model.k_trend:], exog))
+
+    if dynamic:
+        if arma_model.k_exog > 0:
+            # need the last k_ar exog for the lag-polynomial
+            exog_insample = arma_model.exog[start - k_ar:, arma_model.k_trend:]
+            if exog is not None:
+                exog = np.vstack((exog_insample, exog))
+            else:
+                exog = exog_insample
+        #TODO: now that predict does dynamic in-sample it should
+        # also return error estimates and confidence intervals
+        # but how? len(endog) is not tot_obs
+        out_of_sample += end - start + 1
+        return _arma_predict_out_of_sample(params, out_of_sample, resid,
+                                           k_ar, arma_model.k_ma, arma_model.k_trend,
+                                           arma_model.k_exog, endog, exog,
+                                           start, method)
+
+    predictedvalues = _arma_predict_in_sample(start, end, endog, resid,
+                                              k_ar, method)
+    if out_of_sample:
+        forecastvalues = _arma_predict_out_of_sample(params, out_of_sample,
+                                                     resid, k_ar,
+                                                     arma_model.k_ma,
+                                                     arma_model.k_trend,
+                                                     arma_model.k_exog, endog,
+                                                     exog, method=method)
+        predictedvalues = np.r_[predictedvalues, forecastvalues]
+    return predictedvalues
+
+def create_model_no_fit(df, p, q, d=0):
+    return ARIMA(df, order=(p, d, q))
 
 # Prints the stats for an ARMA model
 def stats(arma_mod):
