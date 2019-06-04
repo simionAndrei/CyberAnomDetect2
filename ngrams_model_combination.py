@@ -4,13 +4,16 @@ from operator import itemgetter
 
 import pandas as pd
 
+from scores import predict_by_index
+import numpy as np
+
 class NGramsModel():
 
   def __init__(self, n, logger):
 
     self.n = n
     self.logger = logger
-    self.thresholds = [0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.005]
+    self.thresholds = [0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.002, 0.003]
     self.ngrams_probs = {}
     self.optim_thresholds = []
     self._read_data()
@@ -46,7 +49,7 @@ class NGramsModel():
     return zip(*[signal[i:] for i in range(self.n)])
 
 
-  def fit_signal(self, signal_type, quantiles = 6):
+  def fit_signal(self, signal_type, quantiles = 5):
 
     self.discretizator = PercentilesDiscretization(quantiles = quantiles, logger = self.logger)
     self.discretizator.discretize_signal(self.df_train[signal_type])
@@ -103,7 +106,7 @@ class NGramsModel():
     selected = set()
     self.optim_thresholds.sort(key=itemgetter(1), reverse=True)
 
-    for [signal_type, optim_threshold] in self.optim_thresholds[:10]:
+    for [signal_type, optim_threshold] in self.optim_thresholds[:5]:
       self.discretizator.discretize_signal(self.df_test[signal_type])
       discrete_signal = self.discretizator.get_discrete_signal()
 
@@ -118,14 +121,15 @@ class NGramsModel():
           '''
 
           selected.add(idx)
+          selected.add(idx + self.n - 1)
     tp = 0
     fp = 0
     for idx in selected:
-      start_flag = self.df_optim.iloc[idx]['ATT_FLAG']
-      end_flag = self.df_optim.iloc[idx + self.n - 1]['ATT_FLAG']
-      if int(start_flag) == 1 or int(end_flag) == 1:
+      flag = self.df_test.iloc[idx]['ATT_FLAG']
+      if int(flag) == 1:
         tp += 1
       else:
         fp += 1
 
+    predict_by_index(np.array(list(selected)), self.df_test['ATT_FLAG'] == 1)
     self.logger.log("TOTAL: TP#{} / FP#{}".format(tp, fp))

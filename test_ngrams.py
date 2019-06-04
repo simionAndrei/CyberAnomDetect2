@@ -1,4 +1,4 @@
-from ngrams_model import NGramsModel
+from ngrams_model_combination import NGramsModel
 from logger import Logger
 
 if __name__ == "__main__":
@@ -9,4 +9,4 @@ if __name__ == "__main__":
   model.fit()
   model.predict()
 
-  model.get_best_results(topN = 5)
+  # model.get_best_results(topN = 5)
