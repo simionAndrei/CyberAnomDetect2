@@ -74,8 +74,7 @@ class NGramsModel():
         crt_prob = self.ngrams_probs[signal_type].get(ngram, None)
 
         if crt_prob is None or crt_prob < threshold:
-          #self.logger.log("Predicted anomaly")
-
+          
           start_flag = self.df_optim.iloc[idx]['ATT_FLAG']
           end_flag   = self.df_optim.iloc[idx + self.n - 1]['ATT_FLAG']
           if int(start_flag) == 1 or int(end_flag) == 1:
@@ -115,15 +114,10 @@ class NGramsModel():
         crt_prob = self.ngrams_probs[signal_type].get(ngram, None)
 
         if crt_prob is None or crt_prob < optim_threshold:
-          '''
-          self.logger.log("Predicted anomaly at window:{}-{}".format(
-            self.df_test.index[idx], self.df_test.index[idx + self.n - 1]))
-          '''
-
           selected.add(idx)
           selected.add(idx + self.n - 1)
-    tp = 0
-    fp = 0
+
+    tp, fp = 0, 0
     for idx in selected:
       flag = self.df_test.iloc[idx]['ATT_FLAG']
       if int(flag) == 1:

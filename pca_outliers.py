@@ -35,9 +35,11 @@ def pca_get_outliers(data, n_components, logger):
   pca = PCA(n_components = n_components).fit(std_data)
   logger.log("PCA with {} components done".format(n_components), show_time = True)
 
+  # first 12 for modeling normal subspace
   P = pca.components_[:12].T
-  C = np.dot(P, P.T)
 
+  # formulas as from network traffic anomalies paper
+  C = np.dot(P, P.T)
   y_residual = [np.dot(np.identity(43) - C, y_elem.T) for y_elem in std_data]
 
   # determined by visualizing residual plot on training data
@@ -74,6 +76,3 @@ if __name__ == "__main__":
   data = df_train.loc[:, df_train.columns != 'ATT_FLAG']
   labels = df_train['ATT_FLAG']
   outliers_idxs = pca_get_outliers(data, 15, logger)
-
-  df_train_indexes = df_train.index.values[outliers_idxs]
-  new_df = df_train.drop(df_train_indexes)

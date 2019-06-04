@@ -15,16 +15,17 @@ def pca_get_best_threshold(train_data, optim_data, optim_labels, n_components, t
   std_scaler = StandardScaler()
 
   train_std_data = std_scaler.fit_transform(train_data)
+  optim_std_data = std_scaler.transform(optim_data)
 
   logger.log("Starting PCA on {} features...".format(train_data.shape[1]))
   pca = PCA(n_components = n_components).fit(train_std_data)
   logger.log("PCA with {} components done".format(n_components), show_time = True)
 
+  # first 12 for modeling normal subspace
   P = pca.components_[:12].T
+
+  # formulas as from network traffic anomalies paper
   C = np.dot(P, P.T)
-
-  optim_std_data = std_scaler.transform(optim_data)
-
   y_residual = [np.dot(np.identity(43) - C, y_elem.T) for y_elem in optim_std_data]
 
   optim_rate = {}
@@ -37,14 +38,9 @@ def pca_get_best_threshold(train_data, optim_data, optim_labels, n_components, t
         fp += 1
       elif crt_error > threshold and int(optim_labels[idx]) == 1:
         tp += 1
-      elif crt_error < threshold and int(optim_labels[idx]) == 1:
-        fn += 1
-
-    precision = tp / (tp + fp) if tp + fp != 0 else 0
-    recall = tp / (tp + fn) if tp + fn != 0 else 0
-    f1_score = 2 * (precision * recall)/(precision + recall) if precision + recall != 0 else 0
 
     ratio = tp / fp if fp != 0 else 1
+    # enforcing solutions with more TP
     if tp < 10:
       ratio = 0
 
@@ -55,6 +51,7 @@ def pca_get_best_threshold(train_data, optim_data, optim_labels, n_components, t
   print(optim_rate)
   best_threshold = sorted(optim_rate.items(), key=lambda tup: tup[1])[-1][0]
   logger.log("Best threshold is {}".format(best_threshold))
+
 
 if __name__ == "__main__":
 
@@ -80,6 +77,7 @@ if __name__ == "__main__":
   optim_data = df_optim.loc[:, df_optim.columns != 'ATT_FLAG']
   optim_labels = df_optim['ATT_FLAG']
  
+  # eliminate outliers as seen in pca_outliers.py
   train_data = df_train.loc[:, df_train.columns != 'ATT_FLAG']
   outliers_idxs = pca_get_outliers(train_data, n_components, logger)
   df_train_indexes = df_train.index.values[outliers_idxs]

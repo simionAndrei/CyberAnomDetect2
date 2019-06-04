@@ -15,16 +15,17 @@ def pca_get_attacks(train_data, test_data, test_labels, n_components, threshold,
   std_scaler = StandardScaler()
 
   train_std_data = std_scaler.fit_transform(train_data)
+  test_std_data  = std_scaler.transform(test_data)
 
   logger.log("Starting PCA on {} features...".format(train_data.shape[1]))
   pca = PCA(n_components = n_components).fit(train_std_data)
   logger.log("PCA with {} components done".format(n_components), show_time = True)
 
+  # first 12 for modeling normal subspace
   P = pca.components_[:12].T
+
+  # formulas as from network traffic anomalies paper
   C = np.dot(P, P.T)
-
-  test_std_data = std_scaler.transform(test_data)
-
   y_residual = [np.dot(np.identity(43) - C, y_elem.T) for y_elem in test_std_data]
 
   predict = set()

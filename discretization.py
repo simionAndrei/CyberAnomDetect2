@@ -61,13 +61,3 @@ class PercentilesDiscretization():
       self.logger.log("No signal previously discretize. Call discretize_signal before.")
 
     return self.discrete_signal
-
-
-'''
-signal = df_discrete.values.tolist()
-a = zip(*[signal[i:] for i in range(3)])
-from collections import Counter
-Counter(a).items()
-d = {k: v / len(a) for k, v in Counter(a).items()}
-sum([v for k,v in d.items()])
-'''

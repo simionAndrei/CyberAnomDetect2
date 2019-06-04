@@ -9,6 +9,7 @@ import seaborn as sns
 
 import numpy as np
 
+
 def create_water_tanks_iplot(data_df, logger):
 
   columns = ['L_T' + str(i) for i in range(1, 8)]
@@ -82,7 +83,7 @@ def create_correlation_heatmap(plt_title, corr_df, feats_names, filename, logger
   fig = plt.figure(figsize=(9, 9))
 
   colormap = sns.diverging_palette(220, 10, as_cmap=True)
-  ax = sns.heatmap(corr_df, cmap = colormap) #, annot = True, fmt = ".2f")
+  ax = sns.heatmap(corr_df, cmap = colormap)
   ax.set_title(plt_title)
 
   x = np.array(range(len(feats_names)))

@@ -8,5 +8,3 @@ if __name__ == "__main__":
 
   model.fit()
   model.predict()
-
-  # model.get_best_results(topN = 5)
