@@ -18,7 +18,7 @@ def pca_cumulative_explained_variance(data, logger):
   std_data = std_scaler.fit_transform(data)
 
   logger.log("Starting PCA on {} features...".format(data.shape[1]))
-  pca = PCA(n_components=25).fit(std_data)
+  pca = PCA().fit(std_data)
   logger.log("PCA done", show_time = True)
 
   sns.set()
