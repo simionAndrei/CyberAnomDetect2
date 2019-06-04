@@ -9,9 +9,10 @@ class NGramsModel():
 
     self.n = n
     self.logger = logger
-    self.thresholds = [0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.005, 0.01]
+    self.thresholds = [0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.002, 0.003]
     self.ngrams_probs = {}
     self.optim_thresholds = {}
+    self.results = {}
     self._read_data()
 
 
@@ -45,7 +46,7 @@ class NGramsModel():
     return zip(*[signal[i:] for i in range(self.n)])
 
 
-  def fit_signal(self, signal_type, quantiles = 6):
+  def fit_signal(self, signal_type, quantiles = 5):
 
     self.discretizator = PercentilesDiscretization(quantiles = quantiles, logger = self.logger)
     self.discretizator.discretize_signal(self.df_train[signal_type])
@@ -116,10 +117,6 @@ class NGramsModel():
       crt_prob = self.ngrams_probs[signal_type].get(ngram, None)
 
       if crt_prob is None or crt_prob < self.optim_thresholds[signal_type]:
-        '''
-        self.logger.log("Predicted anomaly at window:{}-{}".format(
-          self.df_test.index[idx], self.df_test.index[idx + self.n - 1]))
-        '''
 
         start_flag = self.df_test.iloc[idx]['ATT_FLAG']
         end_flag   = self.df_test.iloc[idx + self.n - 1]['ATT_FLAG']
@@ -129,6 +126,15 @@ class NGramsModel():
           fp += 1
 
     self.logger.log("Signal {}: TP#{} / FP#{}".format(signal_type, tp, fp))
+    self.results[signal_type] = tp/fp if fp != 0 else 0
 
     return tp, fp
 
+
+  def get_best_results(self, topN):
+
+    results_list = sorted(self.results.items(), key=lambda tup: tup[1], reverse = True)
+
+    self.logger.log("Top {} results:".format(topN))
+    for i in range(topN):
+      self.logger.log("#{} {} - {}".format(i+1, results_list[i][0], results_list[i][1]))
