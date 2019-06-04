@@ -9,7 +9,7 @@ class NGramsModel():
 
     self.n = n
     self.logger = logger
-    self.thresholds = [0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.005]
+    self.thresholds = [0.0001, 0.0002, 0.0003, 0.0004, 0.0005, 0.001, 0.005, 0.01]
     self.ngrams_probs = {}
     self.optim_thresholds = {}
     self._read_data()
