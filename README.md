@@ -40,7 +40,32 @@ prediction, which presented very weak results
 ### BONUS
 * `Bonus.ipynb` - jupyter notebook for Auto-Encoder results
 
-### Helpers
+#### Others
 * `logger.py` -  logging system for generating folders initial structure and saving application logs to HTML files 
 * `scores.py` - helper functions used to calculate the scores for the models
+* `config.txt` - configuration file
 
+#### Additional folders
+* `data\` - for storing data files with BATADAL datasets
+* `output\` - for storing plots at high resolution (**Better to be inspected if the ones from the report are too small due to page limit**)
+
+## Installation :computer:
+The scripts can be run in [Anaconda](https://www.anaconda.com/download/) Windows/Linux environment.
+
+You need to create an Anaconda :snake: `python 3.6` environment named `cyber2`.
+Inside that environment some addition packages needs to be installed. Run the following commands inside Anaconda Prompt ⌨:
+```shell
+(base) conda create -n cyber2 python=3.6 anaconda
+(base) conda activate cyber2
+(cyber2) conda install -c bokeh bokeh
+```
+
+For testing the **Bonus** part, another Anaconda :snake: `python 3.6` environment named cyber_keras needs to be created. Run the following commands inside Anaconda Prompt ⌨:
+```shell
+(base) conda create -n cyber_keras python=3.6 anaconda
+(base) conda activate cyber_keras
+(cyber_keras) conda install -c anaconda keras-gpu
+(cyber_keras) conda install -c anaconda pydot 
+```
+
+If you wish only CPU support, replace keras installation command with *conda install -c conda-forge keras*. For GPU support, NVIDIA CUDA compatible graphic card is needed with proper drivers installed.
