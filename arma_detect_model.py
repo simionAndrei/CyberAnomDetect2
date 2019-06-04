@@ -129,7 +129,6 @@ class ArmaDetectModel:
         # ideally this constant should be deduced via cross-validation
         self.models = self.models[:20]
 
-
     def predict(self):
 
         results = []
@@ -195,8 +194,6 @@ class ArmaDetectModel:
         self.logger.log("BEST COMBINATION: TP#{} / FP#{}".format(tp, fp))
 
         print_scores(total_predictions, self.df_test['ATT_FLAG'] == 1)
-
-
 
 
 if __name__ == "__main__":
