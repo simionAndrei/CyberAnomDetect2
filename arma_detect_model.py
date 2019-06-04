@@ -1,10 +1,4 @@
-from collections import Counter
-
-from statsmodels.tsa.arima_model import _arma_predict_out_of_sample
-
-import pandas as pd
-import numpy as np
-
+from operator import itemgetter
 from arma import *
 
 
@@ -66,21 +60,9 @@ class ArmaDetectModel:
     def _compute_stats(self, series, signal_name, model):
         true_points = np.array(series[signal_name])
 
-        # predict(model.model, model.params, start=str(self.df_train.index[-1]), end=str(series.index[-1]))
-
-        # predict_points = np.array(model.predict(true_points, start=str(self.df_train.index[-1]), end=str(series.index[-1])))[
-        #                  -len(series):]
-
         predict_points = np.array(
             model.predict(start=0, end=-1))
 
-        # params = model.params
-        # p = model.k_ar
-        # q = model.k_ma
-        # k_exog = model.k_exog
-        # k_trend = model.k_trend
-        #
-        # _arma_predict_out_of_sample(params, 2000, )
         std_ma = series[signal_name].rolling(24).mean().std()
 
         se = true_points - predict_points
@@ -91,22 +73,6 @@ class ArmaDetectModel:
         return predict_points, true_points, std_ma, se, mse
 
     def _compute_optimal_threshold(self, model, signal_name):
-
-        # predict_points = np.array(model.predict(start=self.start_optim, end=self.end_optim))
-        # true_points = np.array(self.df_optim[signal_name])
-        #
-        # std_ma = self.df_optim[signal_name].rolling(24).mean().std()
-        #
-        # # attack_points = series[][signal_name]
-        # # normal_points = ~attack_points
-        #
-        # # mse = mean_squared_error(true_points, predict_points)
-        #
-        # # calculate the square error
-        # se = true_points - predict_points
-        # se **= 2
-        #
-        # mse = se.mean()
         (predict_points, true_points, std_ma, se, mse) = self._compute_stats(self.df_optim, signal_name, model)
 
         best_ratio = -1
@@ -139,20 +105,28 @@ class ArmaDetectModel:
         self.logger.log("Optimal threshold for {} is {}".format(signal_name, optim_coefficient))
         self.optim_thresholds[signal_name] = optim_coefficient
 
-        return optim_coefficient
+        return [optim_coefficient, best_ratio]
 
     def fit(self):
 
         for [p, q, d, signal_name] in self.params:
             model = create_model(self.df_optim[signal_name], p, q, d)
-            coefficient = self._compute_optimal_threshold(model, signal_name)
+            [coefficient, ratio] = self._compute_optimal_threshold(model, signal_name)
 
-            self.models.append((model, coefficient, signal_name, [p, q, d, signal_name]))
+            self.models.append((model, coefficient, signal_name, [p, q, d, signal_name], ratio))
+
+        self.models.sort(key=itemgetter(4), reverse=True)
+
+        # take the top 20 models
+        # ideally this constant should be deduced via cross-validation
+        self.models = self.models[:20]
+
 
     def predict(self):
 
+        results = []
         total_predictions = np.full(len(self.df_test), False)
-        for (model, coefficient, signal_name, [p, q, d, signal_name]) in self.models:
+        for (model, coefficient, signal_name, [p, q, d, signal_name], ratio) in self.models:
             try:
                 model = create_model(self.df_test[signal_name], p, q, d)
             except:
@@ -172,7 +146,15 @@ class ArmaDetectModel:
 
             fp = total_estimated_attacks - tp
 
-            self.logger.log("Signal {}: TP#{} / FP#{}".format(signal_name, tp, fp))
+            if fp == 0:
+                ratio = 1 if tp != 0 else 0
+            else:
+                ratio = tp / fp
+
+            result = "Signal {}: TP#{} / FP#{} / RATIO#{}".format(signal_name, tp, fp, ratio)
+
+            results.append([ratio, result, predictions])
+            self.logger.log(result)
 
             total_predictions = total_predictions + predictions
 
@@ -184,6 +166,27 @@ class ArmaDetectModel:
         fp = total_estimated_attacks - tp
 
         self.logger.log("TOTAL: TP#{} / FP#{}".format(tp, fp))
+
+        results.sort(key=itemgetter(0), reverse=True)
+
+        self.logger.log("Best signals {}".format(results))
+
+        selected_predictions = np.full(len(self.df_test), False)
+
+        for [_, _, prediction] in results[:5]:
+            selected_predictions = selected_predictions + prediction
+
+        selected_estimated_attacks = selected_predictions.sum()
+
+        # tp is the sum of values in the attack positions
+        tp = (selected_predictions[self.test_attacks_location]).sum()
+
+        fp = selected_estimated_attacks - tp
+
+        # This is purely theoretical because we need to know the labels to deduce this :)
+        self.logger.log("BEST COMBINATION: TP#{} / FP#{}".format(tp, fp))
+
+
 
 
 if __name__ == "__main__":
