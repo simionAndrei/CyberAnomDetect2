@@ -6,6 +6,7 @@ import pandas as pd
 
 from pca_outliers import pca_get_outliers
 from logger import Logger
+from scores import predict_by_index
 
 
 def pca_get_attacks(train_data, test_data, test_labels, n_components, threshold, logger):
@@ -26,15 +27,20 @@ def pca_get_attacks(train_data, test_data, test_labels, n_components, threshold,
 
   y_residual = [np.dot(np.identity(43) - C, y_elem.T) for y_elem in test_std_data]
 
+  predict = set()
   tp, fp = 0, 0
   for idx, crt_obs in enumerate(test_std_data):
     crt_error = sum(y_residual[idx] - crt_obs) ** 2
 
-    if crt_error > threshold and int(test_labels[idx]) != 1:
-      fp += 1
-    elif crt_error > threshold and int(test_labels[idx]) == 1:
-      tp += 1
+    if crt_error > threshold:
+      predict.add(idx)
 
+      if int(test_labels[idx]) != 1:
+        fp += 1
+      elif int(test_labels[idx]) == 1:
+        tp += 1
+
+  predict_by_index(np.array(list(predict)), df_test['ATT_FLAG'] == 1)
   logger.log("Results on test data: {}/{} TP/FP".format(tp, fp))
 
   
